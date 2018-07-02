@@ -1,48 +1,37 @@
 import React, { Component } from 'react';
-import { Route, Link } from 'react-router-dom';
+import { ddate } from '../Util'
+import CommentItem from './CommentItem'
+import { connect } from 'react-redux';
+
+import {
+    updateComment, fetchComments, fetchPost
+} from '../actions'
 
 class Post extends Component {
-    // constructor() {
-    //     super();
-    //     this.match = this.props.match; 
-    // }
-    state = {
-        post: {},
-        comments: {}
-    }
+   
+    
     componentDidMount = () => {
-        
-        const { match } = this.props
-        const requestHeaders = new Headers();
-        requestHeaders.append('Authorization', '234ec567785');
-        const url = 'http://localhost:3001/posts/' + match.params.id;
-        fetch(url, { headers: requestHeaders }).then((res) => {
-            res.json().then((post) => ( this.setState({ post })));
-        });
-        const commentUrl = url + '/comments'
-        fetch(commentUrl, { headers: requestHeaders }).then((res) => {
-            res.json().then((comments) => (this.setState({ comments })));
-        });
+        const { match, dispatch } = this.props
+        dispatch(fetchPost(match.params.id));
+        dispatch(fetchComments(match.params.id));
     }
+
     render() {
-        let {post, comments} = this.state;
+        let {post, comments} = this.props;
         comments = (Array.isArray(comments)) ? comments : [];
-        console.log(comments)
         return (
             <div>
                 <h3>{post.title}</h3>
-                <span>{post.timestamp}</span>
-                <span>{post.author}</span>
+                <span>{ddate(post.timestamp)}</span> | 
+                <span> {post.author}</span> | 
+                <span> {post.voteScore}</span>
                 <p>{post.body}</p>
-                <a href="">Edit</a>
+                <a href={"/edit/post/" + post.id }>Edit</a>
                 <button className="btn btn-link">Delete</button>
                 <ol>
                     {comments.map((comment, index) => (
                         <li key={index}>
-                            <p>{comment.body}</p>
-                            <div>{comment.author}</div>
-                            <a href="">Edit</a>
-                            <button className="btn btn-link">Delete</button>
+                            <CommentItem  comment={comment}/>
                         </li>
                     ))}
                 </ol>
@@ -58,4 +47,15 @@ class Post extends Component {
     }
 }
 
-export { Post }
+
+const mapStateToProps = (store, props) => {
+    const { postsReducer, commentsReducer } = store;
+    const { isFetching, post } = postsReducer;
+    const { comments } = commentsReducer;
+ 
+    return {
+        isFetching, post, comments
+    }
+}
+
+export default connect(mapStateToProps)(Post)

@@ -1,25 +1,24 @@
 import React, { Component } from 'react';
-import { Route, Link } from 'react-router-dom';
+import { connect } from 'react-redux';
+import PostItem from './PostItem';
+
+import { fetchPostsByCat } from '../actions'
 
 class Category extends Component {
     state = { posts: []}
     componentDidMount() {
 
-        const { match } = this.props
-
-        const requestHeaders = new Headers();
-        requestHeaders.append('Authorization', '234ec567785');
-        const url = 'http://localhost:3001/' + match.params.id + '/posts';
-        fetch(url, { headers: requestHeaders, }).then((result) => {
-            result.json().then((posts) => { this.setState({ posts }) });
-        });
+        const { match, dispatch } = this.props
+        const category = match.params.id;
+        dispatch(fetchPostsByCat(category));
     }
     render() {
         let { posts, sortBy } = this.state;
+        const { itemsZ } = this.props;
         return (
-            <div>
-                <a href="/form" className="btn btn-primary">Add New Post</a>
-                <p>Sort By:</p>
+            <div className="col-lg-12">
+                <a href="/form" className="btn btn-primary" style={{ marginBottom: 20 }}>Add New Post</a>
+                <p style={{ marginBottom: 0 }}>Sort By:</p>
                 <select className="form-control" onChange={this.handleChange}>
                     <option value="comments">
                         No. of Comments
@@ -28,17 +27,8 @@ class Category extends Component {
                         Date
                     </option>
                 </select>
-                {posts.map((post) => (
-                    <div key={post.id}>
-                        <span className="badge">{post.author}</span>
-                        <Link to={"/posts/" + post.id}><h4>{post.title}</h4></Link>
-                        <p>{post.body}</p>
-                        <Link to={"/posts/" + post.id}><span>{post.commentCount} Comments {post.commentCount > 1}</span></Link>
-                        <p>==========================</p>
-                        <b>VoteScore:{post.voteScore}</b> <button> Upvote </button>
-                        <button> Downvote </button>
-                        <p>==========================</p>
-                    </div>
+                {itemsZ.map((post, index) => (
+                    <PostItem postObj={post} key={post.id} index={index} />
                 ))}
             </div>
         )
@@ -46,4 +36,14 @@ class Category extends Component {
 
 }
 
-export { Category }
+const mapStateToProps = (store, props) => {
+    const { postsReducer } = store;
+    const { isFetching, mappedItems } = postsReducer;
+    let itemsZ = [];
+    Object.entries(mappedItems).forEach(([key, value]) => itemsZ.push(value));
+    return {
+        isFetching, itemsZ
+    }
+}
+
+export default connect(mapStateToProps)(Category)

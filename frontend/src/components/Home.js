@@ -1,29 +1,43 @@
 import React, { Component } from 'react';
 import { Route, Link } from 'react-router-dom';
+import { connect } from 'react-redux';
+import PostItem from './PostItem';
 
-export default class Home extends Component {
+import {
+    fetchPostsCat,
+    fetchPosts, upvote, fetchPost, sortPosts
+} from '../actions'
+
+class Home extends Component {
+
     state = {
         categories: '',
         posts: [],
-        comments: [],
         sortBy: 'comments',
     }
 
     handleChange = (e) => {
+        const { dispatch } = this.props;
         var target = e.target
         this.setState({
             sortBy: target.value
         });
-        this.sortPosts(this.state.sortBy)
+        dispatch(sortPosts(this.state.sortBy));
     }
 
     sortPosts = (by) => {
-        const {posts} = this.state;
+        const {itemsZ} = this.props;
+        let posts = itemsZ;
         if (by === "date") {
             posts.sort(function (a, b) {
                 return a.timestamp - b.timestamp;
             })
-        } else {
+        } else if (by === "votescore") {
+            posts.sort(function (a, b) {
+                return a.voteScore - b.voteScore;
+            })
+        }
+        else {
             posts.sort(function (a, b) {
                 return a.commentCount - b.commentCount;
             })
@@ -32,55 +46,48 @@ export default class Home extends Component {
     }
 
     componentDidMount = () => {
-        const requestHeaders = new Headers();
-        requestHeaders.append('Authorization', '234ec567785');
-
-        fetch('http://localhost:3001/categories', { headers: requestHeaders }).then((result) => {
-            result.json().then((categories) => { this.setState({ categories }) });
-        });
-
-        fetch('http://localhost:3001/posts', { headers: requestHeaders }).then((result) => {
-            result.json().then((posts) => { this.setState({ posts }) });
-        });
-
+        const { dispatch } = this.props
+        dispatch(fetchPosts());
+        dispatch(fetchPostsCat());
     }
-
+    
     render() {
+        const {isFetching, itemsZ, categories } = this.props;
+        let { sortBy }  = this.state;
+        const cats = (Array.isArray(categories.categories)) ? categories.categories : [];
         console.log(this.state);
-        let { posts, categories, sortBy }  = this.state;
-        categories = (Array.isArray(categories.categories)) ? categories.categories : [];
         return (
-            <div>
-                <ul className="nav">
-                    {categories.map((cat, index) => (
-                        <Link to={cat.name + '/posts'} key={index}>{cat.name}</Link>
-                    ))}
-                </ul>
-
-                <a href="/form" className="btn btn-primary">Add New Post</a>
-                <p>Sort By:</p>
+            <div className="col-lg-12">
+                <a href="/form" className="btn btn-primary" style={{ marginBottom: 20}}>Add New Post</a>
+                <p style={{ marginBottom: 0 }}>Sort By:</p>
                 <select className="form-control" onChange={this.handleChange}>
                     <option value="comments">
                         No. of Comments
+                    </option>
+                    <option value="votescore">
+                        Votes
                     </option>
                     <option value="date">
                        Date
                     </option>
                 </select>
-                {posts.map( (post) => (
-                    <div key={post.id}>
-                        <span className="badge">{ post.author }</span>
-                        <Link to={"posts/"+ post.id }><h4>{ post.title }</h4></Link>
-                        <p>{ post.body }</p>
-                        <Link to={"posts/" + post.id}><span>{post.commentCount} Comments {post.commentCount > 1}</span></Link>
-                        <p>==========================</p>
-                        <b>VoteScore:{post.voteScore}</b> <button> Upvote </button>
-                        <button> Downvote </button>
-                        <p>==========================</p>
-                    </div>
+                {itemsZ.map( (post, index) => (
+                    <PostItem postObj={post} key={post.id} index={index}/>
                 ))}
                 
             </div>
         )
     }
 }
+
+const mapStateToProps = (store, props) => {
+    const { postsReducer } = store;
+    const { isFetching,lastUpdated, categories,  mappedItems, items } = postsReducer;
+    let itemsZ = [];
+    Object.entries(mappedItems).forEach(([key, value]) => itemsZ.push(value)); 
+    return {
+        isFetching, lastUpdated, categories, mappedItems, itemsZ, items
+    }
+}
+
+export default connect(mapStateToProps)(Home);
